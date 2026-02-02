@@ -1,0 +1,376 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tocloft}
+
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Guía de Desarrollo - Astro Dashboard}
+\lhead{Clase Magistral}
+\cfoot{\thepage}
+
+% Code styling
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  backgroundcolor=\color{lightgray},
+  frame=single,
+  language=javascript
+}
+
+\title{\textbf{Guía de Desarrollo: Dashboard de Gestión de Proyectos con Astro}\\Clase Magistral para Juniors}
+\author{Desarrollador Senior}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+Esta guía te llevará a través del desarrollo de un Dashboard de gestión de proyectos usando Astro. No es un tutorial paso a paso, sino una guía conceptual que te ayudará a entender cómo y por qué hacemos las cosas de cierta manera.
+
+Astro es un framework web moderno que se enfoca en el rendimiento. La idea central es simple: renderiza HTML estático por defecto, y solo agrega JavaScript donde sea necesario. Esto resulta en sitios web más rápidos y mejores experiencias de usuario.
+
+\section{Conceptos Fundamentales}
+
+\subsection{¿Qué es la Arquitectura de Islas?}
+
+Imagina una página web como un océano. La mayoría del contenido es agua (HTML estático). Pero hay islas (componentes interactivos) que flotan en ese océano. Cada isla es independiente y se carga solo cuando es necesario.
+
+En términos técnicos, la Arquitectura de Islas significa:
+
+\begin{itemize}
+  \item La mayoría de tu página se renderiza como HTML puro
+  \item Los componentes interactivos se marcan explícitamente
+  \item Solo esos componentes reciben JavaScript
+  \item Cada componente interactivo es independiente
+\end{itemize}
+
+\subsection{Componentes Estáticos vs. Interactivos}
+
+En Astro, todos los componentes son estáticos por defecto. Esto significa que se renderan como HTML puro sin JavaScript.
+
+Para hacer un componente interactivo, necesitas agregar una directiva \texttt{client:*}. Esta directiva le dice a Astro que debe hidratar (convertir a componente interactivo) ese componente específico.
+
+\section{Estructura del Proyecto}
+
+\subsection{Organización de Archivos}
+
+\begin{lstlisting}
+client/
+  src/
+    components/
+      DashboardLayout.tsx      # Layout principal
+      DashboardStats.tsx       # Estadísticas
+      ProjectCard.tsx          # Tarjeta de proyecto
+      ProjectFilter.tsx        # Filtro interactivo
+    pages/
+      Home.tsx                 # Página principal
+      ProjectDetail.tsx        # Detalles del proyecto
+      Tasks.tsx                # Página de tareas
+    lib/
+      mockData.ts              # Datos de ejemplo
+    index.css                  # Estilos globales
+\end{lstlisting}
+
+\subsection{Propósito de Cada Carpeta}
+
+La carpeta \texttt{components/} contiene componentes reutilizables. Algunos son estáticos, otros son interactivos. La carpeta \texttt{pages/} contiene las páginas principales de la aplicación. La carpeta \texttt{lib/} contiene utilidades y datos.
+
+\section{Componentes Principales}
+
+\subsection{DashboardLayout: Un Client Island}
+
+El layout es un componente interactivo porque necesita manejar el estado del sidebar (abierto/cerrado) en dispositivos móviles. Aquí está la estructura:
+
+\begin{lstlisting}
+export default function DashboardLayout({ 
+  children, 
+  activeNav = 'projects' 
+}) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  
+  return (
+    <div className="flex h-screen">
+      <aside>
+        {/* Sidebar content */}
+      </aside>
+      <main>
+        {children}
+      </main>
+    </div>
+  );
+}
+\end{lstlisting}
+
+Este componente usa React hooks (\texttt{useState}) para manejar el estado. Por eso es un Client Island.
+
+\subsection{ProjectCard: Componente Estático}
+
+La tarjeta de proyecto solo muestra información. No necesita interactividad más allá de un enlace. Por eso es completamente estática:
+
+\begin{lstlisting}
+export default function ProjectCard({ project }) {
+  return (
+    <div className="bg-card border border-border rounded-lg p-6">
+      <h3>{project.name}</h3>
+      <p>{project.description}</p>
+      <div className="w-full bg-secondary h-2">
+        <div style={{width: `${project.progress}%`}} />
+      </div>
+      <a href={`/projects/${project.id}`}>Ver detalles</a>
+    </div>
+  );
+}
+\end{lstlisting}
+
+No hay estado, no hay event listeners. Solo props y renderizado.
+
+\subsection{ProjectFilter: Client Island con client:idle}
+
+El filtro es interactivo pero no crítico. Se marca con \texttt{client:idle} para mejorar el rendimiento de carga inicial:
+
+\begin{lstlisting}
+export default function ProjectFilter({ onFilterChange }) {
+  const [selectedStatus, setSelectedStatus] = React.useState('all');
+  const [searchTerm, setSearchTerm] = React.useState('');
+  
+  const handleStatusChange = (status) => {
+    setSelectedStatus(status);
+    onFilterChange(status, searchTerm);
+  };
+  
+  return (
+    <div>
+      <input 
+        type="text" 
+        placeholder="Buscar..."
+        onChange={(e) => handleSearchChange(e.target.value)}
+      />
+      {/* Filter buttons */}
+    </div>
+  );
+}
+\end{lstlisting}
+
+\section{Datos y Estado}
+
+\subsection{Mock Data}
+
+Para esta aplicación, usamos datos de ejemplo en \texttt{mockData.ts}. En una aplicación real, estos datos vendrían de una API:
+
+\begin{lstlisting}
+export const mockProjects = [
+  {
+    id: '1',
+    name: 'Rediseño del Portal',
+    status: 'in-progress',
+    progress: 65,
+    team: ['Ana García', 'Carlos López'],
+    tasks: [...]
+  },
+  // más proyectos...
+];
+\end{lstlisting}
+
+\subsection{Gestión de Estado}
+
+En la página Home, usamos React hooks para gestionar el estado del filtro:
+
+\begin{lstlisting}
+export default function Home() {
+  const [filteredProjects, setFilteredProjects] = 
+    React.useState(mockProjects);
+  
+  const handleFilterChange = (status, searchTerm) => {
+    let filtered = mockProjects;
+    
+    if (status !== 'all') {
+      filtered = filtered.filter(p => p.status === status);
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredProjects(filtered);
+  };
+  
+  return (
+    <DashboardLayout>
+      <ProjectFilter onFilterChange={handleFilterChange} />
+      <div className="grid">
+        {filteredProjects.map(project => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
+      </div>
+    </DashboardLayout>
+  );
+}
+\end{lstlisting}
+
+\section{Estilos con Tailwind CSS}
+
+Usamos Tailwind CSS para los estilos. Los tokens de diseño se definen en \texttt{index.css}:
+
+\begin{lstlisting}
+:root {
+  --primary: oklch(0.55 0.24 264.5);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.01 0);
+  /* más variables... */
+}
+\end{lstlisting}
+
+Luego usamos estos tokens en nuestros componentes:
+
+\begin{lstlisting}
+<div className="bg-background text-foreground">
+  <button className="bg-primary text-primary-foreground">
+    Acción
+  </button>
+</div>
+\end{lstlisting}
+
+\section{Mejores Prácticas}
+
+\subsection{Cuándo Usar Componentes Estáticos}
+
+Usa componentes estáticos cuando:
+
+\begin{itemize}
+  \item Solo muestran datos (sin estado)
+  \item No tienen event listeners
+  \item Son puramente presentacionales
+\end{itemize}
+
+Ejemplos: tarjetas, estadísticas, listas de solo lectura.
+
+\subsection{Cuándo Usar Client Islands}
+
+Usa Client Islands cuando:
+
+\begin{itemize}
+  \item Necesitan manejar estado (React hooks)
+  \item Tienen event listeners (click, input, etc.)
+  \item Requieren interactividad del usuario
+\end{itemize}
+
+Ejemplos: formularios, filtros, modales, carruseles.
+
+\subsection{Elegir la Directiva Correcta}
+
+\begin{itemize}
+  \item \textbf{client:load}: Componentes críticos (header, navegación)
+  \item \textbf{client:idle}: Componentes secundarios (filtros, widgets)
+  \item \textbf{client:visible}: Componentes debajo del fold (galerías, comentarios)
+\end{itemize}
+
+\section{Flujo de Desarrollo}
+
+\subsection{Paso 1: Crear un Componente Estático}
+
+Comienza siempre con un componente estático. Renderiza datos, nada más:
+
+\begin{lstlisting}
+export default function MyComponent({ data }) {
+  return <div>{data.name}</div>;
+}
+\end{lstlisting}
+
+\subsection{Paso 2: Agregar Interactividad si es Necesaria}
+
+Si necesitas interactividad, conviértelo en un Client Island:
+
+\begin{lstlisting}
+export default function MyComponent({ data }) {
+  const [expanded, setExpanded] = React.useState(false);
+  
+  return (
+    <div onClick={() => setExpanded(!expanded)}>
+      {data.name}
+      {expanded && <p>{data.description}</p>}
+    </div>
+  );
+}
+\end{lstlisting}
+
+\subsection{Paso 3: Usar en la Página}
+
+En tu página, usa el componente. Si es interactivo, agrega la directiva:
+
+\begin{lstlisting}
+// Estático
+<MyComponent data={data} />
+
+// Interactivo
+<MyComponent client:idle data={data} />
+\end{lstlisting}
+
+\section{Debugging y Troubleshooting}
+
+\subsection{El Componente no es Interactivo}
+
+Si tu componente no responde a clicks o cambios, probablemente olvidaste la directiva \texttt{client:*}. Verifica que esté presente en la página.
+
+\subsection{Demasiado JavaScript}
+
+Si tu página carga mucho JavaScript, revisa qué componentes están marcados con \texttt{client:load}. Intenta cambiar a \texttt{client:idle} o \texttt{client:visible}.
+
+\subsection{Errores de Hidratación}
+
+Los errores de hidratación ocurren cuando el HTML renderizado en el servidor no coincide con el que React espera. Asegúrate de que tus componentes renderan el mismo HTML en ambos lados.
+
+\section{Próximos Pasos}
+
+\subsection{Mejorar la Aplicación}
+
+\begin{enumerate}
+  \item Conectar a una API real en lugar de usar mock data
+  \item Agregar autenticación de usuario
+  \item Implementar persistencia de datos
+  \item Agregar más páginas y funcionalidades
+\end{enumerate}
+
+\subsection{Aprender Más}
+
+\begin{itemize}
+  \item Lee la documentación oficial de Astro
+  \item Explora ejemplos en GitHub
+  \item Únete a la comunidad de Astro
+  \item Experimenta con otros frameworks (Vue, Svelte)
+\end{itemize}
+
+\section{Conclusión}
+
+Astro es un framework poderoso que te permite construir sitios web rápidos y escalables. La clave es entender la Arquitectura de Islas: renderiza HTML estático por defecto, y solo agrega JavaScript donde sea necesario.
+
+Con esta guía, deberías ser capaz de:
+
+\begin{itemize}
+  \item Entender cómo funciona Astro
+  \item Crear componentes estáticos e interactivos
+  \item Elegir la directiva correcta para cada situación
+  \item Construir aplicaciones web modernas y performantes
+\end{itemize}
+
+Recuerda: el mejor código es el que no existe. Si no necesitas JavaScript, no lo incluyas. Astro te ayuda a lograr exactamente eso.
+
+\end{document}

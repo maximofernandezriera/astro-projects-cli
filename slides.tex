@@ -1,0 +1,361 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Define colors
+\definecolor{astroBlue}{RGB}{85, 100, 255}
+\definecolor{darkGray}{RGB}{32, 33, 35}
+\definecolor{lightGray}{RGB}{242, 242, 242}
+
+\setbeamercolor{primary}{bg=astroBlue, fg=white}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamertemplate{navigation symbols}{}
+
+% Code styling
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  keywordstyle=\color{astroBlue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  backgroundcolor=\color{lightGray},
+  frame=single,
+  rulecolor=\color{darkGray}
+}
+
+\title{Astro: Arquitectura de Islas para Aplicaciones Web Modernas}
+\author{Clase Magistral de Desarrollo Web}
+\date{\today}
+
+\begin{document}
+
+% Slide 1: Title
+\frame{\titlepage}
+
+% Slide 2: Agenda
+\begin{frame}
+  \frametitle{Agenda}
+  \begin{itemize}
+    \item ¿Qué es Astro y por qué importa?
+    \item Arquitectura de Islas: Concepto Fundamental
+    \item Componentes Estáticos vs. Interactivos
+    \item Client Directives: Hidratación Selectiva
+    \item Caso de Estudio: Dashboard de Gestión de Proyectos
+    \item Performance y Mejores Prácticas
+    \item Conclusiones y Próximos Pasos
+  \end{itemize}
+\end{frame}
+
+% Slide 3: What is Astro
+\begin{frame}
+  \frametitle{¿Qué es Astro?}
+  
+  Astro es un framework web moderno que se enfoca en el rendimiento mediante un enfoque revolucionario:
+  
+  \begin{itemize}
+    \item \textbf{HTML-First}: Renderiza a HTML estático por defecto
+    \item \textbf{Zero JavaScript}: Sin JavaScript innecesario
+    \item \textbf{Partial Hydration}: Hidratación selectiva de componentes
+    \item \textbf{Framework Agnostic}: Soporta React, Vue, Svelte, etc.
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  \textit{``Astro ayuda a construir sitios web más rápidos con menos JavaScript.''} -- Documentación oficial de Astro
+\end{frame}
+
+% Slide 4: The Problem with SPAs
+\begin{frame}
+  \frametitle{El Problema con las SPAs Tradicionales}
+  
+  Las Single Page Applications (SPAs) envían mucho JavaScript al cliente:
+  
+  \begin{center}
+    \begin{tabular}{|c|c|c|}
+      \hline
+      \textbf{Métrica} & \textbf{SPA Tradicional} & \textbf{Astro} \\
+      \hline
+      JavaScript Inicial & 200-500 KB & 0-50 KB \\
+      \hline
+      Time to Interactive & 3-5 segundos & 0.5-1 segundo \\
+      \hline
+      Rendimiento Móvil & Pobre & Excelente \\
+      \hline
+    \end{tabular}
+  \end{center}
+  
+  \vspace{0.5cm}
+  
+  Astro resuelve esto mediante la Arquitectura de Islas.
+\end{frame}
+
+% Slide 5: Islands Architecture Concept
+\begin{frame}
+  \frametitle{Arquitectura de Islas: El Concepto}
+  
+  La Arquitectura de Islas es un patrón de diseño donde:
+  
+  \begin{itemize}
+    \item La mayoría de la página es HTML estático (agua)
+    \item Componentes interactivos son ``islas'' independientes
+    \item Cada isla se hidrata de forma selectiva
+    \item Las islas no necesitan comunicarse entre sí
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  \textbf{Ventajas:}
+  \begin{itemize}
+    \item Rendimiento: Menos JavaScript
+    \item Escalabilidad: Islas independientes
+    \item Flexibilidad: Múltiples frameworks en la misma página
+  \end{itemize}
+\end{frame}
+
+% Slide 6: Static Components
+\begin{frame}[fragile]
+  \frametitle{Componentes Estáticos: HTML Puro}
+  
+  Por defecto, todos los componentes de Astro se renderan como HTML:
+  
+  \begin{lstlisting}[language=jsx]
+// Este componente se renderiza como HTML puro
+export default function ProjectCard({ project }) {
+  return (
+    <div className="card">
+      <h3>{project.name}</h3>
+      <p>{project.description}</p>
+      <a href={`/projects/${project.id}`}>
+        Ver detalles
+      </a>
+    </div>
+  );
+}
+  \end{lstlisting}
+  
+  \textbf{Resultado}: HTML rápido, sin JavaScript.
+\end{frame}
+
+% Slide 7: Client Directives
+\begin{frame}[fragile]
+  \frametitle{Client Directives: Agregando Interactividad}
+  
+  Para hacer un componente interactivo, usas directivas \texttt{client:*}:
+  
+  \begin{lstlisting}[language=jsx]
+// client:load - Carga inmediatamente
+<ProjectFilter client:load onChange={handleChange} />
+
+// client:idle - Carga cuando el navegador está inactivo
+<ProjectFilter client:idle onChange={handleChange} />
+
+// client:visible - Carga solo cuando es visible
+<ProjectFilter client:visible onChange={handleChange} />
+  \end{lstlisting}
+  
+  Cada directiva controla cuándo y cómo se hidrata el componente.
+\end{frame}
+
+% Slide 8: Hydration Strategies
+\begin{frame}
+  \frametitle{Estrategias de Hidratación}
+  
+  \begin{center}
+    \begin{tabular}{|l|p{6cm}|}
+      \hline
+      \textbf{Directiva} & \textbf{Cuándo Usar} \\
+      \hline
+      \texttt{client:load} & Componentes críticos que necesitan interactividad inmediata \\
+      \hline
+      \texttt{client:idle} & Componentes secundarios, se cargan cuando el navegador está inactivo \\
+      \hline
+      \texttt{client:visible} & Componentes en el viewport, se cargan cuando son visibles \\
+      \hline
+      \texttt{client:only} & Solo renderiza en cliente (sin HTML estático) \\
+      \hline
+    \end{tabular}
+  \end{center}
+  
+  \vspace{0.5cm}
+  
+  \textbf{Principio}: Usa la directiva menos agresiva que satisfaga tus necesidades.
+\end{frame}
+
+% Slide 9: Case Study - Dashboard Overview
+\begin{frame}
+  \frametitle{Caso de Estudio: Dashboard de Gestión de Proyectos}
+  
+  Hemos construido una aplicación real que demuestra los conceptos de Astro:
+  
+  \begin{itemize}
+    \item \textbf{Componentes Estáticos}: ProjectCard, DashboardStats
+    \item \textbf{Client Islands}: DashboardLayout, ProjectFilter
+    \item \textbf{Páginas}: Home, ProjectDetail, Tasks
+    \item \textbf{Datos}: Mock data para demostración
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  Esta aplicación es un caso de uso realista que muestra cómo Astro puede mejorar el rendimiento sin sacrificar la funcionalidad.
+\end{frame}
+
+% Slide 10: Architecture Diagram
+\begin{frame}
+  \frametitle{Arquitectura del Dashboard}
+  
+  \begin{center}
+    \textbf{Estructura de Componentes}
+    
+    \vspace{0.5cm}
+    
+    \begin{tabular}{|c|c|}
+      \hline
+      \textbf{Componente} & \textbf{Tipo} \\
+      \hline
+      DashboardLayout & Client Island (client:load) \\
+      \hline
+      ProjectCard & Estático \\
+      \hline
+      DashboardStats & Estático \\
+      \hline
+      ProjectFilter & Client Island (client:idle) \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+% Slide 11: Performance Benefits
+\begin{frame}
+  \frametitle{Beneficios de Rendimiento}
+  
+  Astro logra mejor rendimiento mediante:
+  
+  \begin{itemize}
+    \item \textbf{Menos JavaScript}: Solo lo necesario se envía al cliente
+    \item \textbf{Carga Paralela}: Las islas se cargan de forma independiente
+    \item \textbf{Renderizado Rápido}: HTML estático se sirve inmediatamente
+    \item \textbf{Mejor SEO}: HTML completo disponible para crawlers
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  \textbf{Resultado}: Sitios web más rápidos, mejor experiencia de usuario, mejor SEO.
+\end{frame}
+
+% Slide 12: Best Practices
+\begin{frame}
+  \frametitle{Mejores Prácticas con Astro}
+  
+  \begin{enumerate}
+    \item \textbf{Comienza con Estático}: Renderiza como HTML por defecto
+    \item \textbf{Añade Interactividad Selectivamente}: Solo donde sea necesario
+    \item \textbf{Elige la Directiva Correcta}: client:idle para no-crítico, client:load para crítico
+    \item \textbf{Mantén Islas Pequeñas}: Componentes independientes y reutilizables
+    \item \textbf{Monitorea el Rendimiento}: Mide el impacto de cada isla
+  \end{enumerate}
+\end{frame}
+
+% Slide 13: Comparison with Other Frameworks
+\begin{frame}
+  \frametitle{Astro vs. Otros Frameworks}
+  
+  \begin{center}
+    \begin{tabular}{|l|c|c|c|}
+      \hline
+      \textbf{Característica} & \textbf{Astro} & \textbf{Next.js} & \textbf{Vue} \\
+      \hline
+      HTML Estático por Defecto & \checkmark & Parcial & $\times$ \\
+      \hline
+      Hidratación Selectiva & \checkmark & $\times$ & $\times$ \\
+      \hline
+      Framework Agnostic & \checkmark & $\times$ & $\times$ \\
+      \hline
+      Curva de Aprendizaje & Baja & Media & Media \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+% Slide 14: Real World Applications
+\begin{frame}
+  \frametitle{Aplicaciones del Mundo Real}
+  
+  Astro es ideal para:
+  
+  \begin{itemize}
+    \item \textbf{Sitios de Contenido}: Blogs, documentación, landing pages
+    \item \textbf{Dashboards}: Como el que hemos construido
+    \item \textbf{E-commerce}: Catálogos de productos con carrito interactivo
+    \item \textbf{Aplicaciones Híbridas}: Mezcla de contenido estático e interactivo
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  \textbf{Nota}: Astro no es ideal para aplicaciones completamente interactivas (como editores de código o aplicaciones en tiempo real).
+\end{frame}
+
+% Slide 15: Getting Started with Astro
+\begin{frame}[fragile]
+  \frametitle{Comenzando con Astro}
+  
+  \begin{lstlisting}[language=bash]
+# Crear un nuevo proyecto
+npm create astro@latest
+
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm run dev
+
+# Compilar para producción
+npm run build
+  \end{lstlisting}
+\end{frame}
+
+% Slide 16: Conclusion
+\begin{frame}
+  \frametitle{Conclusión}
+  
+  \begin{itemize}
+    \item Astro revoluciona cómo construimos sitios web modernos
+    \item La Arquitectura de Islas es el futuro del desarrollo web
+    \item Rendimiento y funcionalidad no son mutuamente excluyentes
+    \item Astro permite construir aplicaciones rápidas y escalables
+  \end{itemize}
+  
+  \vspace{0.5cm}
+  
+  \textbf{Próximos Pasos}:
+  \begin{itemize}
+    \item Experimenta con Astro en tus proyectos
+    \item Explora la documentación oficial
+    \item Únete a la comunidad de Astro
+  \end{itemize}
+\end{frame}
+
+% Slide 17: Q&A
+\begin{frame}
+  \frametitle{Preguntas y Respuestas}
+  
+  \begin{center}
+    \Large
+    ¿Preguntas?
+    
+    \vspace{1cm}
+    
+    Documentación: \url{https://docs.astro.build}
+    
+    GitHub: \url{https://github.com/withastro/astro}
+  \end{center}
+\end{frame}
+
+\end{document}
